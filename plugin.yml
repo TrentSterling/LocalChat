@@ -6,10 +6,12 @@ author: Trent Sterling
 load:
     -POSTWORLD
 commands:
-    chat:
-        description: Total chat replacement for skyblock. Replaces all chat commands, and has a global, admin, local, and messaging chat system.
-        usage: /chat
-        aliases: c
     g:
         description: Automatically toggles global on and passes on the message.
-        usage: /g message
+        usage: /g 
+    l:
+        description: Automatically toggles local on and passes on the message.
+        usage: /l 
+    a:
+        description: Automatically toggles admin on and passes on the message.
+        usage: /a 
