@@ -49,6 +49,11 @@ public class LocalChatPlugin extends JavaPlugin implements Listener
 	@EventHandler
 	public void onChatMessage(AsyncPlayerChatEvent e)
 	{
+
+		if (e.isCancelled())
+		{
+			return;
+		}
 		Player player = e.getPlayer();
 		// messageOps("CHAT: <" + p.getDisplayName() + "> " + e.getMessage());
 
@@ -70,7 +75,7 @@ public class LocalChatPlugin extends JavaPlugin implements Listener
 
 		if (chatmode == "ADMIN")
 		{
-			messageOps("[Admin]<" + player.getDisplayName() + "> " + e.getMessage());
+			messageOps("[Admin]<" + player.getDisplayName() + "> " + ChatColor.GREEN + e.getMessage());
 			getLogger().info("A: " + player.getName() + ": " + e.getMessage());
 		}
 
@@ -90,19 +95,19 @@ public class LocalChatPlugin extends JavaPlugin implements Listener
 		Player player = (Player) sender;
 		if (arg3.length == 0)
 		{
-			player.sendMessage(ChatColor.GOLD +""+ ChatColor.BOLD + "Use /chat (G)lobal, (L)ocal, or (A)dmin to set your chat mode!");
+			player.sendMessage(ChatColor.GOLD + "" + ChatColor.BOLD + "Use /chat (G)lobal, (L)ocal, or (A)dmin to set your chat mode!");
 		}
 		else
 		{
 			String desiredMode = arg3[0];
 			if (desiredMode.equalsIgnoreCase("G"))
 			{
-				player.sendMessage(ChatColor.GOLD +""+ ChatColor.BOLD +"Chat mode is G(lobal)");
+				player.sendMessage(ChatColor.GOLD + "" + ChatColor.BOLD + "Chat mode is G(lobal)");
 				player.setMetadata("ChatMode", new FixedMetadataValue(this, "GLOBAL"));
 			}
 			else if (desiredMode.equalsIgnoreCase("L"))
 			{
-				player.sendMessage(ChatColor.GOLD +""+ ChatColor.BOLD + "Chat mode is L(ocal)");
+				player.sendMessage(ChatColor.GOLD + "" + ChatColor.BOLD + "Chat mode is L(ocal)");
 				player.setMetadata("ChatMode", new FixedMetadataValue(this, "LOCAL"));
 			}
 			else if (desiredMode.equalsIgnoreCase("A"))
@@ -110,17 +115,17 @@ public class LocalChatPlugin extends JavaPlugin implements Listener
 
 				if (player.isOp())
 				{
-					player.sendMessage(ChatColor.GOLD +""+ ChatColor.BOLD + "Chat mode is A(dmin)");
+					player.sendMessage(ChatColor.GOLD + "" + ChatColor.BOLD + "Chat mode is A(dmin)");
 					player.setMetadata("ChatMode", new FixedMetadataValue(this, "ADMIN"));
 				}
 				else
 				{
-					player.sendMessage(ChatColor.GOLD +""+ ChatColor.BOLD + "Sorry, OPs only, my friend.");
+					player.sendMessage(ChatColor.GOLD + "" + ChatColor.BOLD + "Sorry, OPs only, my friend.");
 				}
 			}
 			else
 			{
-				player.sendMessage(ChatColor.GOLD +""+ ChatColor.BOLD + "Use /chat (G)lobal, (L)ocal, or (A)dmin to set your chat mode!");
+				player.sendMessage(ChatColor.GOLD + "" + ChatColor.BOLD + "Use /chat (G)lobal, (L)ocal, or (A)dmin to set your chat mode!");
 			}
 		}
 		return true;
