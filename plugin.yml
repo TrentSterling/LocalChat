@@ -1,0 +1,15 @@
+name: LocalChat
+main: com.trentsterling.localchat.LocalChatPlugin
+version: 0.1
+description: Total chat replacement for skyblock. Replaces all chat commands, and has a global, admin, local, and messaging chat system.
+author: Trent Sterling
+load:
+    -POSTWORLD
+commands:
+    chat:
+        description: Total chat replacement for skyblock. Replaces all chat commands, and has a global, admin, local, and messaging chat system.
+        usage: /chat
+        aliases: c
+    g:
+        description: Automatically toggles global on and passes on the message.
+        usage: /g message
