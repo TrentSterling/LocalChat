@@ -1,5 +1,8 @@
 package com.trentsterling.localchat;
 
+import java.util.HashMap;
+import java.util.List;
+
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
@@ -10,136 +13,313 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.metadata.FixedMetadataValue;
+import org.bukkit.metadata.MetadataValue;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class LocalChatPlugin extends JavaPlugin implements Listener
 {
 
-	public void messageAllPlayers(String msg)
+	String font = ChatColor.GOLD + "" + ChatColor.BOLD;
+
+	/*
+	 * UTILITIES - Metadata, Get players, check if console
+	 * 
+	 * FIXME: Move these utils to a seperate library.
+	 */
+
+	public Boolean isSenderPlayer(CommandSender sender)
 	{
+		if (sender instanceof Player)
+		{
+			return true;
+		}
+		return false;
+	}
+
+	public Boolean isSenderConsole(CommandSender sender)
+	{
+		if (sender instanceof Player)
+		{
+			return false;
+		}
+		return true;
+	}
+
+	public Boolean hasNeitherOpNorPermission(Player player, String perm)
+	{
+		if (!player.isOp() && !player.hasPermission(perm))
+		{
+			return true;
+		}
+		return false;
+	}
+
+	public Boolean hasOpOrPermission(Player player, String perm)
+	{
+		if (player.isOp() || player.hasPermission(perm))
+		{
+			return true;
+		}
+		return false;
+	}
+
+	public void setMetadata(Player player, String key, Object value)
+	{
+		player.setMetadata(key, new FixedMetadataValue(this, value));
+	}
+
+	public Object getMetadata(Player player, String key)
+	{
+		List<MetadataValue> values = player.getMetadata(key);
+
+		// why are we iterating?
+		for (MetadataValue value : values)
+		{
+			return value.value();
+		}
+
+		// if we got here, we didnt get a metadata value... why?
+
+		return null;
+	}
+
+	public Boolean hasMetadata(Player player, String key)
+	{
+		if (getMetadata(player, key) != null)
+		{
+			return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Meat of plugin below
+	 */
+
+	public void messageAllPlayers(Player from, String msg)
+	{
+		getLogger().info("[G] " + from.getName() + ": " + msg);
+		getLogger().info(msg);
 		for (Player p : Bukkit.getOnlinePlayers())
 		{
-			p.sendMessage(msg);
+			p.sendMessage("[G]<" + from.getDisplayName() + "> " + msg);
 		}
 	}
 
 	public void messageLocal(Player from, String msg)
 	{
+		getLogger().info("[L] " + from.getName() + ": " + msg);
 		for (Player player : from.getWorld().getPlayers())
 		{
 			if (from.getLocation().distance(player.getLocation()) <= 100)
 			{
-				player.sendMessage(msg);
+				player.sendMessage("[Local]<" + from.getDisplayName() + "> " + ChatColor.GREEN + msg);
 			}
 		}
 	}
 
-	public void messageStaff(String msg)
+	public void messageStaff(Player from, String msg)
 	{
+		getLogger().info("[A] " + from.getName() + ": " + msg);
+		getLogger().info(msg);
 		for (Player p : Bukkit.getOnlinePlayers())
 		{
-			if (p.isOp() || p.hasPermission("localchat.admin"))
+			if (hasOpOrPermission(p, "localchat.admin"))
 			{
-				p.sendMessage(msg);
+				p.sendMessage("[Admin]<" + from.getDisplayName() + "> " + ChatColor.AQUA + msg);
 			}
 		}
+	}
+
+	public void DEBUGERROR(Player player, String msg)
+	{
+
+		getLogger().info(msg);
+		messageStaff(player, msg);
 	}
 
 	@EventHandler
 	public void onChatMessage(AsyncPlayerChatEvent e)
 	{
+		// If cancelled by muting plugin or something, dont continue.
 		if (e.isCancelled())
 		{
 			return;
 		}
-		Player player = e.getPlayer();
-		String chatmode = String.valueOf(player.getMetadata("ChatMode").get(0).asString());
-		if (chatmode == "GLOBAL")
-		{
-			if (player.isOp() || player.hasPermission("localchat.global"))
-			{
-				messageAllPlayers("[G]<" + player.getDisplayName() + "> " + e.getMessage());
-				getLogger().info("G: " + player.getName() + ": " + e.getMessage());
-			}
-			else
-			{
-				player.sendMessage(ChatColor.GOLD + "" + ChatColor.BOLD + "Global permissions needed, changing your chatmode!");
 
-				player.sendMessage(ChatColor.GOLD + "" + ChatColor.BOLD + "Chat mode is L(ocal)");
-				player.setMetadata("ChatMode", new FixedMetadataValue(this, "LOCAL"));
-			}
-		}
-		if (chatmode == "LOCAL")
-		{
-			messageLocal(player, "[Local]<" + player.getDisplayName() + "> " + ChatColor.GRAY + e.getMessage());
-			getLogger().info("L: " + player.getName() + ": " + e.getMessage());
-		}
-		if (chatmode == "ADMIN")
-		{
-			if (player.isOp() || player.hasPermission("localchat.admin"))
-			{
-				messageStaff("[Admin]<" + player.getDisplayName() + "> " + ChatColor.GREEN + e.getMessage());
-				getLogger().info("A: " + player.getName() + ": " + e.getMessage());
-			}
-			else
-			{
-				player.sendMessage(ChatColor.GOLD + "" + ChatColor.BOLD + "Admin permissions needed, changing your chatmode!");
-
-				player.sendMessage(ChatColor.GOLD + "" + ChatColor.BOLD + "Chat mode is L(ocal)");
-				player.setMetadata("ChatMode", new FixedMetadataValue(this, "LOCAL"));
-			}
-		}
+		// Cancel this event because we never really want to use normal chat anymore.
 		e.setCancelled(true);
 
+		// Get player
+		Player player = e.getPlayer();
+
+		String chatmode = "LOCAL";
+
+		// TODO: Construct message tags and brackets using the message(locality) function
+		// Check if data is set
+		if (hasMetadata(player, "chatmode"))
+		{
+			chatmode = (String) getMetadata(player, "chatmode");
+		}
+		else
+		{
+
+			// Why dont he have this fuckin data? Set it.
+			DEBUGERROR(player, ChatColor.DARK_RED + "NACHOERROR: Data wasnt set on: " + player.getName() + " - saying message: " + e.getMessage());
+			this.DEBUGERROR(player, ChatColor.RED + "NACHOERROR: HASMETADATA BEFORE: " + hasMetadata(player, "chatmode"));
+			forceLocalMode(player);
+			this.DEBUGERROR(player, ChatColor.GREEN + "NACHOERROR: HASMETADATA AFTER: " + hasMetadata(player, "chatmode"));
+			// this.DEBUGERROR(player, "NACHOERROR: Report to NachoHat - logs need checking.");
+
+			// player.sendMessage(ChatColor.AQUA + "RANDOM BUG: chatmode SET TO LOCAL! TELL NACHOHAT IF THIS HAPPENS PLEASE.");
+
+			// lets see if player was added to the hashmap
+
+			String added = map.get(player);
+
+			if (added == null)
+			{
+
+				this.DEBUGERROR(player, ChatColor.RED + "NACHOERROR: PLAYER NOT IN HASHMAP");
+
+			}
+			else
+			{
+				this.DEBUGERROR(player, ChatColor.RED + "NACHOERROR: IN HASH: " + added);
+
+			}
+
+		}
+
+		/**
+		 * local
+		 */
+		if (chatmode == "LOCAL")
+		{
+			messageLocal(player, e.getMessage());
+		}
+
+		/**
+		 * global
+		 */
+		if (chatmode == "GLOBAL")
+		{
+			if (hasOpOrPermission(player, "localchat.global"))
+			{
+				messageAllPlayers(player, e.getMessage());
+			}
+			else
+			{
+				// In global but dont have perms? Fuck off good sir!
+				player.sendMessage(font + "Permissions needed, changing your chatmode!");
+				forceLocalMode(player);
+				// we'll be nice and go ahead and pass the chat in local
+				messageLocal(player, e.getMessage());
+			}
+		}
+
+		/**
+		 * admin
+		 */
+		if (chatmode == "ADMIN")
+		{
+			if (hasOpOrPermission(player, "localchat.admin"))
+			{
+				messageStaff(player, e.getMessage());
+			}
+			else
+			{
+				// In adminchat but dont have perms? Fuck off good sir!
+				player.sendMessage(font + "Permissions needed, changing your chatmode!");
+				forceLocalMode(player);
+				// we'll be nice and go ahead and pass the chat in local
+				messageLocal(player, e.getMessage());
+			}
+		}
+	}
+
+	/**
+	 * Force modes
+	 */
+	public void forceLocalMode(Player player)
+	{
+		player.sendMessage(font + "Chat mode is (L)ocal");
+		setMetadata(player, "chatmode", "LOCAL");
+		map.put(player, "ADDED");
+	}
+
+	public void forceAdminMode(Player player)
+	{
+		player.sendMessage(font + "Chat mode is (A)dmin");
+		setMetadata(player, "chatmode", "ADMIN");
+		map.put(player, "ADDED");
+	}
+
+	public void forceGlobalMode(Player player)
+	{
+		player.sendMessage(font + "Chat mode is (G)lobal");
+		setMetadata(player, "chatmode", "GLOBAL");
+		map.put(player, "ADDED");
 	}
 
 	@Override
 	public boolean onCommand(CommandSender sender, Command arg1, String arg2, String[] arg3)
 	{
-		if (!(sender instanceof Player))
+		/**
+		 * Switch to Global, Local, or Admin chat modes
+		 */
+		if (isSenderConsole(sender))
 		{
 			sender.sendMessage("This command can only be run by a PLAYER.");
 			return true;
 		}
 
+		// cast player
 		Player player = (Player) sender;
 
+		/**
+		 * switch to local
+		 */
 		if (arg2.equalsIgnoreCase("L"))
 		{
-			player.sendMessage(ChatColor.GOLD + "" + ChatColor.BOLD + "Chat mode is L(ocal)");
-			player.setMetadata("ChatMode", new FixedMetadataValue(this, "LOCAL"));
+			forceLocalMode(player);
 			return true;
 		}
 
+		/**
+		 * switch to global
+		 */
 		if (arg2.equalsIgnoreCase("G"))
 		{
-			if (player.isOp() || player.hasPermission("localchat.global"))
+			if (hasOpOrPermission(player, "localchat.global"))
 			{
-				player.sendMessage(ChatColor.GOLD + "" + ChatColor.BOLD + "Chat mode is G(lobal)");
-				player.setMetadata("ChatMode", new FixedMetadataValue(this, "GLOBAL"));
-				return true;
+				this.forceGlobalMode(player);
 			}
 			else
 			{
-				player.sendMessage(ChatColor.GOLD + "" + ChatColor.BOLD + "Global permissions needed");
+				player.sendMessage(font + "Global permissions needed");
 			}
 			return true;
 		}
 
+		/**
+		 * switch to admin
+		 */
 		if (arg2.equalsIgnoreCase("A"))
 		{
-			if (player.isOp() || player.hasPermission("localchat.admin"))
+			if (hasOpOrPermission(player, "localchat.admin"))
 			{
-				player.sendMessage(ChatColor.GOLD + "" + ChatColor.BOLD + "Chat mode is A(dmin)");
-				player.setMetadata("ChatMode", new FixedMetadataValue(this, "ADMIN"));
+				this.forceAdminMode(player);
 			}
 			else
 			{
-				player.sendMessage(ChatColor.GOLD + "" + ChatColor.BOLD + "Admin permissions needed");
+				player.sendMessage(font + "Admin permissions needed");
 			}
 			return true;
 		}
-		player.sendMessage(ChatColor.GOLD + "" + ChatColor.BOLD + "Use /G, /L, or /A to set your chat mode!");
+
+		// No good input, lets display help
+		player.sendMessage(font + "Use /G, /L, or /A to set your chat mode!");
 		return true;
 	}
 
@@ -149,13 +329,19 @@ public class LocalChatPlugin extends JavaPlugin implements Listener
 		super.onEnable();
 		getServer().getPluginManager().registerEvents(this, this);
 		getLogger().info("Nachos Local Chat Plugin Loaded");
+		for (Player p : Bukkit.getOnlinePlayers())
+		{
+			forceLocalMode(p);
+		}
 	}
+
+	HashMap<Player, String> map = new HashMap<Player, String>();
 
 	@EventHandler
 	public void onPlayerJoin(PlayerJoinEvent event)
 	{
 		Player player = event.getPlayer();
-		player.setMetadata("ChatMode", new FixedMetadataValue(this, "LOCAL"));
-		player.sendMessage("CHATMODE = LOCAL");
+		forceLocalMode(player);
 	}
+
 }
